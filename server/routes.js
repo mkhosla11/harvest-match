@@ -185,11 +185,12 @@ const urban_wildfires_co2 = async function(req, res) {
 // Route 6: GET /api/top_co2_countries
 const top_co2_countries = async function(req, res) {
   const limit = req.query.limit || 10; // Default to 10 if not specified
+  const year = req.query.year || 2019; // Default to 2019 if not specified
   const q = `
     SELECT c.name, ce.co2_per_capita
     FROM co2_emissions ce
     JOIN country c ON ce.country_id = c.country_id
-    WHERE ce.year = 2019
+    WHERE ce.year = ${year}
     ORDER BY ce.co2_per_capita DESC
     LIMIT ${limit};
   `
