@@ -20,7 +20,7 @@ export default function CropTrendsPage() {
     fetch("http://localhost:8080/crop-trends")
       .then((res) => res.json())
       .then((data) => setData(data))
-      .catch((err) => console.error("Failed to fetch crop trends:", err));
+      .catch((err) => console.error(err));
   }, []);
 
   const states = [...new Set(data.map((row) => row.state))];

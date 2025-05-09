@@ -39,7 +39,6 @@ const mapPage = function(req, res) {
 
 const getStateAverages = async function (req, res) {
   const state = req.params.state.toUpperCase();
-  console.log("STATE RECEIVED:", state);
 
   connection.query(`
     WITH pollution_avg AS (
@@ -98,10 +97,9 @@ const getStateAverages = async function (req, res) {
       WHERE p.state = $1;
   `, [state], (err, data) => {
     if (err) {
-      console.log("Query failed:", err);
-      res.status(500).json({ error: 'Query failed' });
+      console.log(err);
+      res.json([]);
     } else {
-      console.log("Rows returned:", data.rows.length);
       res.json(data.rows);
     }
   });
@@ -414,8 +412,8 @@ const bestCropBySeason = async function (req, res) {
     ORDER BY season;
   `, (err, data) => {
     if (err) {
-      console.error("Query error:", err);
-      res.status(500).json({ error: "Query failed" });
+      console.log(err);
+      res.json({});
     } else {
       res.json(data.rows);
     }
@@ -446,8 +444,8 @@ const bestSeasonForCrop = async function (req, res) {
     ORDER BY crop;
   `, (err, data) => {
     if (err) {
-      console.error("Query error:", err);
-      res.status(500).json({ error: "Query failed" });
+      console.log(err);
+      res.json({});
     } else {
       res.json(data.rows);
     }

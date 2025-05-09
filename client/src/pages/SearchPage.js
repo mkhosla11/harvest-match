@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function SearchPage() {
-  const [region, setRegion] = useState("Northeast");
+  const [region, setRegion] = useState("Midwest");
   const [temperatureMin, setTemperatureMin] = useState(0);
   const [temperatureMax, setTemperatureMax] = useState(120);
   const [rainfallMin, setRainfallMin] = useState(0);
@@ -44,7 +44,7 @@ export default function SearchPage() {
       setResults(filtered);
       setShowPopup(true);
     } catch (error) {
-      console.error("Error fetching crop data:", error);
+      console.error(error);
     }
   };
 

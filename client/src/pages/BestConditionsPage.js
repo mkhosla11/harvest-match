@@ -10,7 +10,7 @@ export default function BestConditionsPage() {
     fetch("http://localhost:8080/best-conditions")
       .then((res) => res.json())
       .then((data) => setCrops(data))
-      .catch((err) => console.error("Failed to fetch crops:", err));
+      .catch((err) => console.error(err));
   }, []);
 
   const routes = [
@@ -47,19 +47,19 @@ export default function BestConditionsPage() {
             onClick={() => setSelectedCrop(crop)}
           >
             <img
-  src={`/images/${crop.crop.toLowerCase().replace(/\s+/g, '')}.jpg`}
-  alt={crop.crop}
-  style={{
-    width: "100px",
-    height: "100px",
-    objectFit: "cover",
-    borderRadius: "8px"
-  }}
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src = "/images/placeholder.jpg"; // fallback image if not found
-  }}
-/>
+            src={`/images/${crop.crop.toLowerCase().replace(/\s+/g, '')}.jpg`}
+            alt={crop.crop}
+            style={{
+            width: "100px",
+            height: "100px",
+            objectFit: "cover",
+            borderRadius: "8px"
+            }}
+            onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/images/placeholder.jpg";
+            }}
+            />
             <div>{crop.crop}</div>
           </div>
         ))}

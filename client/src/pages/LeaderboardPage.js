@@ -19,7 +19,7 @@ export default function LeaderboardPage() {
     fetch("http://localhost:8080/best-climate-resilient-crops")
       .then((res) => res.json())
       .then((data) => setData(data))
-      .catch((err) => console.error("Failed to load data:", err));
+      .catch((err) => console.error(err));
   }, []);
 
   const routes = [

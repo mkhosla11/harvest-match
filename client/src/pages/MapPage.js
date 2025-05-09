@@ -16,15 +16,13 @@ export default function MapPage() {
   useEffect(() => {
     if (selectedState) {
       const url = `http://localhost:8080/state/${encodeURIComponent(selectedState)}`;
-      console.log("Fetching from:", url);
       fetch(url)
         .then((res) => res.json())
         .then((data) => {
-          console.log("Data received:", data);
-          setStateClimateData(data[0]); // now expecting a single row per state
+          setStateClimateData(data[0]); 
         })
         .catch((err) => {
-          console.error("Fetch error:", err);
+          console.error(err);
           setStateClimateData(null);
         });
     }
@@ -64,7 +62,7 @@ export default function MapPage() {
                   key={geo.rsmKey}
                   geography={geo}
                   onClick={() => {
-                    setStateClimateData(null); // reset before fetching new data
+                    setStateClimateData(null); 
                     setSelectedState(geo.properties.name);
                   }}
                   style={{
