@@ -3,132 +3,69 @@ QUERIES
 """
 
 ## COMPLEX QUERIES
-query1 = """ /* COMPLEX QUERY 1: HISTORICAL AVERAGES BY STATE AND SEASON */
+query1 = """ /* COMPLEX QUERY 1: HISTORICAL AVERAGES BY STATE */
 WITH pollution_avg AS (
-  SELECT UPPER("State") AS state, INITCAP("Season") AS season,
-         AVG("CO Mean") AS avg_co,
-         AVG("NO2 Mean") AS avg_no2,
-         AVG("SO2 Mean") AS avg_so2,
-         AVG("O3 Mean") AS avg_o3
-  FROM pollution_data
-  GROUP BY UPPER("State"), INITCAP("Season")
-),
-weather_avg AS (
-  SELECT UPPER(state) AS state, INITCAP(season) AS season,
-         AVG(precipitation) AS avg_precipitation
-  FROM weather_events
-  GROUP BY UPPER(state), INITCAP(season)
-),
-temperature_avg AS (
-  SELECT UPPER(state) AS state, INITCAP(season) AS season,
-         AVG(average_temp) AS avg_temp
-  FROM temperature_data
-  GROUP BY UPPER(state), INITCAP(season)
-),
-crop_yield_ranked AS (
-  SELECT UPPER(state) AS state, INITCAP(season) AS season,
-         crop,
-         AVG(yield_kg_per_acre) AS avg_yield,
-         ROW_NUMBER() OVER (
-           PARTITION BY UPPER(state), INITCAP(season)
-           ORDER BY AVG(yield_kg_per_acre) DESC
-         ) AS rank
-  FROM crop_data
-  GROUP BY UPPER(state), INITCAP(season), crop
-),
-crop_summary AS (
-  SELECT state, season, crop AS dominant_crop
-  FROM crop_yield_ranked
-  WHERE rank = 1
-)
+      SELECT
+        UPPER("State") AS state,
+        AVG("CO Mean") AS avg_co,
+        AVG("NO2 Mean") AS avg_no2,
+        AVG("SO2 Mean") AS avg_so2,
+        AVG("O3 Mean") AS avg_o3
+      FROM pollution_data
+      WHERE "Year" BETWEEN 2016 AND 2022
+      GROUP BY UPPER("State")
+    ),
+    weather_avg AS (
+      SELECT
+        UPPER(state) AS state,
+        AVG(precipitation) AS avg_precipitation
+      FROM weather_events
+      WHERE start_date BETWEEN '2016-01-01' AND '2022-12-31'
+      GROUP BY UPPER(state)
+    ),
+    temperature_avg AS (
+      SELECT
+        UPPER(state) AS state,
+        AVG(average_temp) AS avg_temp
+      FROM temperature_data
+      WHERE year BETWEEN 2016 AND 2022
+      GROUP BY UPPER(state)
+    ),
+    crop_yield_ranked AS (
+      SELECT
+        UPPER(state) AS state,
+        crop,
+        AVG(yield_kg_per_acre) AS avg_yield,
+        ROW_NUMBER() OVER (
+          PARTITION BY UPPER(state)
+          ORDER BY AVG(yield_kg_per_acre) DESC
+        ) AS rank
+      FROM crop_data
+      WHERE year BETWEEN 2016 AND 2022
+      GROUP BY UPPER(state), crop
+    ),
+    crop_summary AS (
+      SELECT
+        state,
+        crop AS dominant_crop
+      FROM crop_yield_ranked
+      WHERE rank = 1
+    )
 
-SELECT
-  p.state,
-  p.season,
-  ROUND(p.avg_co::numeric, 4) AS avg_co,
-  ROUND(p.avg_no2::numeric, 4) AS avg_no2,
-  ROUND(p.avg_so2::numeric, 4) AS avg_so2,
-  ROUND(p.avg_o3::numeric, 4) AS avg_o3,
-  ROUND(w.avg_precipitation::numeric, 4) AS avg_precipitation,
-  ROUND(t.avg_temp::numeric, 2) AS avg_temp,
-  c.dominant_crop
-
-FROM pollution_avg p
-LEFT JOIN weather_avg w ON p.state = w.state AND p.season = w.season
-LEFT JOIN temperature_avg t ON p.state = t.state AND p.season = t.season
-LEFT JOIN crop_summary c ON p.state = c.state AND p.season = c.season
-ORDER BY p.state, p.season; """
-
-query1a = """ /* SAME AS COMPLEX QUERY 1 BUT DOES NOT GROUP BY SEASONS */
-  WITH pollution_avg AS (
-  SELECT
-    "Year" AS year,
-    UPPER("State") AS state,
-    AVG("CO Mean") AS avg_co,
-    AVG("NO2 Mean") AS avg_no2,
-    AVG("SO2 Mean") AS avg_so2,
-    AVG("O3 Mean") AS avg_o3
-  FROM pollution_data
-  WHERE "Year" BETWEEN 2016 AND 2022
-  GROUP BY "Year", UPPER("State")
-),
-weather_avg AS (
-  SELECT
-    EXTRACT(YEAR FROM start_date)::int AS year,
-    UPPER(state) AS state,
-    AVG(precipitation) AS avg_precipitation
-  FROM weather_events
-  WHERE start_date BETWEEN '2016-01-01' AND '2022-12-31'
-  GROUP BY EXTRACT(YEAR FROM start_date), UPPER(state)
-),
-temperature_avg AS (
-  SELECT
-    year,
-    UPPER(state) AS state,
-    AVG(average_temp) AS avg_temp
-  FROM temperature_data
-  WHERE year BETWEEN 2016 AND 2022
-  GROUP BY year, UPPER(state)
-),
-crop_yield_ranked AS (
-  SELECT
-    year,
-    UPPER(state) AS state,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    ROW_NUMBER() OVER (
-      PARTITION BY year, UPPER(state)
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
-  FROM crop_data
-  WHERE year BETWEEN 2016 AND 2022
-  GROUP BY year, UPPER(state), crop
-),
-crop_summary AS (
-  SELECT
-    year,
-    state,
-    crop AS dominant_crop
-  FROM crop_yield_ranked
-  WHERE rank = 1
-)
-
-SELECT
-  p.year,
-  p.state,
-  ROUND(p.avg_co::numeric, 4) AS avg_co,
-  ROUND(p.avg_no2::numeric, 4) AS avg_no2,
-  ROUND(p.avg_so2::numeric, 4) AS avg_so2,
-  ROUND(p.avg_o3::numeric, 4) AS avg_o3,
-  ROUND(w.avg_precipitation::numeric, 2) AS avg_precipitation,
-  ROUND(t.avg_temp::numeric, 2) AS avg_temp,
-  c.dominant_crop
-
-FROM pollution_avg p
-LEFT JOIN weather_avg w ON p.year = w.year AND p.state = w.state
-LEFT JOIN temperature_avg t ON p.year = t.year AND p.state = t.state
-LEFT JOIN crop_summary c ON p.year = c.year AND p.state = c.state
-ORDER BY p.state, p.year; """
+    SELECT
+      p.state,
+      ROUND(p.avg_co::numeric, 4) AS avg_co,
+      ROUND(p.avg_no2::numeric, 4) AS avg_no2,
+      ROUND(p.avg_so2::numeric, 4) AS avg_so2,
+      ROUND(p.avg_o3::numeric, 4) AS avg_o3,
+      ROUND(w.avg_precipitation::numeric, 2) AS avg_precipitation,
+      ROUND(t.avg_temp::numeric, 2) AS avg_temp,
+      c.dominant_crop
+    FROM pollution_avg p
+    LEFT JOIN weather_avg w ON p.state = w.state
+    LEFT JOIN temperature_avg t ON p.state = t.state
+    LEFT JOIN crop_summary c ON p.state = c.state
+    WHERE p.state = "STATE NAME";"""
 
 query2 = """/* COMPLEX QUERY 2: AVG CROP YIELD BASED ON AVG POLLUTION, PRECIPITATION, AND TEMPERATURE (takes 27s) */
 WITH crop_yearly AS (
@@ -220,7 +157,6 @@ crop_pollution_best AS (
   FROM pollution_label
   GROUP BY crop, pollution_group
 ),
--- Temperature
 crop_temp AS (
   SELECT
     c.crop,
@@ -253,7 +189,6 @@ crop_temp_best AS (
   FROM temp_label
   GROUP BY crop, temp_group
 ),
--- Precipitation
 yearly_precip AS (
   SELECT
     EXTRACT(YEAR FROM start_date)::int AS year,
@@ -295,8 +230,6 @@ crop_precip_best AS (
   FROM precip_label
   GROUP BY crop, precip_group
 )
-
--- Final Output
 SELECT
   p.crop,
   p.best_pollution,
@@ -363,277 +296,142 @@ ORDER BY avg_yield_in_extremes DESC; """
 
 
 ## SIMPLE QUERIES
-query5 = """/* SIMPLE QUERY 1: BEST CROP TO PLANT BY STATE BASED ON YIELD */
-WITH crop_yield_ranked AS (
+query5 = """/* SIMPLE QUERY 1: BEST CROP TO PLANT BY REGION BASED ON YIELD */
+WITH state_regions AS (
+  SELECT * FROM (VALUES
+    ('MAINE','Northeast'), ('NEW HAMPSHIRE','Northeast'), ('VERMONT','Northeast'), ('MASSACHUSETTS','Northeast'), ('RHODE ISLAND','Northeast'), ('CONNECTICUT','Northeast'),
+    ('NEW YORK','Northeast'), ('PENNSYLVANIA','Northeast'), ('NEW JERSEY','Northeast'),
+    ('DELAWARE','Southeast'), ('MARYLAND','Southeast'), ('DISTRICT OF COLUMBIA','Southeast'), ('VIRGINIA','Southeast'), ('WEST VIRGINIA','Southeast'), ('NORTH CAROLINA','Southeast'),
+    ('SOUTH CAROLINA','Southeast'), ('GEORGIA','Southeast'), ('FLORIDA','Southeast'), ('KENTUCKY','Southeast'), ('TENNESSEE','Southeast'), ('MISSISSIPPI','Southeast'),
+    ('ALABAMA','Southeast'), ('ARKANSAS','Southeast'), ('LOUISIANA','Southeast'),
+    ('OHIO','Midwest'), ('MICHIGAN','Midwest'), ('INDIANA','Midwest'), ('ILLINOIS','Midwest'), ('WISCONSIN','Midwest'),
+    ('MINNESOTA','Midwest'), ('IOWA','Midwest'), ('MISSOURI','Midwest'), ('NORTH DAKOTA','Midwest'), ('SOUTH DAKOTA','Midwest'), ('NEBRASKA','Midwest'), ('KANSAS','Midwest'),
+    ('TEXAS','Southwest'), ('OKLAHOMA','Southwest'), ('NEW MEXICO','Southwest'), ('ARIZONA','Southwest'),
+    ('COLORADO','West'), ('UTAH','West'), ('NEVADA','West'), ('CALIFORNIA','West'),
+    ('MONTANA','Northwest'), ('IDAHO','Northwest'), ('OREGON','Northwest'), ('WASHINGTON','Northwest'), ('WYOMING','Northwest'),
+    ('ALASKA','Pacific'), ('HAWAII','Pacific')
+  ) AS t(state, region)
+),
+regional_yields AS (
+  SELECT sr.region, c.crop, AVG(c.yield_kg_per_acre) AS avg_yield
+  FROM crop_data c
+  JOIN state_regions sr ON UPPER(c.state) = sr.state
+  GROUP BY sr.region, c.crop
+),
+ranked AS (
+  SELECT crop, region, avg_yield,
+         ROW_NUMBER() OVER (PARTITION BY crop ORDER BY avg_yield DESC) AS rank
+  FROM regional_yields
+)
+SELECT crop, region AS best_region, ROUND(avg_yield::numeric, 2) AS avg_yield
+FROM ranked
+WHERE rank = 1
+ORDER BY crop; """
+
+query6 = """/* SIMPLE QUERY 2: BEST CROPS TO PLANT BASED ON MIN/MAX POLLUTION */
+WITH state_pollution_index AS (
   SELECT
-    UPPER(state) AS state,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    ROW_NUMBER() OVER (
-      PARTITION BY UPPER(state)
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
+    UPPER("State") AS state,
+    AVG("CO Mean") + AVG("NO2 Mean") + AVG("SO2 Mean") + AVG("O3 Mean") AS pollution_index
+  FROM pollution_data
+  WHERE "Year" BETWEEN 2016 AND 2022
+  GROUP BY UPPER("State")
+),
+crop_states AS (
+  SELECT DISTINCT UPPER(state) AS state, crop
   FROM crop_data
-  GROUP BY UPPER(state), crop
+  WHERE year BETWEEN 2016 AND 2022
+),
+crop_pollution_joined AS (
+  SELECT
+    cs.crop,
+    spi.pollution_index
+  FROM crop_states cs
+  JOIN state_pollution_index spi ON cs.state = spi.state
 )
-
 SELECT
-  state,
-  crop AS best_crop_to_plant,
-  ROUND(avg_yield::numeric, 2) AS avg_yield_kg_per_acre
-FROM crop_yield_ranked
-WHERE rank = 1
-ORDER BY state; """
+  crop,
+  ROUND(MIN(pollution_index)::numeric, 2) AS min_pollution_index,
+  ROUND(MAX(pollution_index)::numeric, 2) AS max_pollution_index
+FROM crop_pollution_joined
+GROUP BY crop
+ORDER BY crop; """
 
-query6 = """/* SIMPLE QUERY 2: BEST CROPS TO PLANT BASED ON POLLUTION */
-WITH crop_pollution AS (
-  SELECT
-    c.crop,
-    c.yield_kg_per_acre,
-    (p."CO Mean" + p."NO2 Mean" + p."SO2 Mean" + p."O3 Mean") AS pollution_score
-  FROM crop_data c
-  JOIN pollution_data p ON c.year = p."Year" AND UPPER(c.state) = UPPER(p."State")
-  WHERE c.year BETWEEN 2016 AND 2021
-),
-ranked_pollution AS (
-  SELECT *,
-    NTILE(3) OVER (ORDER BY pollution_score) AS pollution_level
-  FROM crop_pollution
-),
-pollution_category AS (
-  SELECT *,
-    CASE
-      WHEN pollution_level = 1 THEN 'Low'
-      WHEN pollution_level = 2 THEN 'Mid'
-      ELSE 'High'
-    END AS pollution_group
-  FROM ranked_pollution
-),
-avg_yield_by_pollution AS (
-  SELECT
-    pollution_group,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    ROW_NUMBER() OVER (PARTITION BY pollution_group ORDER BY AVG(yield_kg_per_acre) DESC) AS rank
-  FROM pollution_category
-  GROUP BY pollution_group, crop
-)
-
-SELECT pollution_group, crop, ROUND(avg_yield::numeric, 2) AS avg_yield
-FROM avg_yield_by_pollution
-WHERE rank = 1
-ORDER BY pollution_group; """
-
-query7 = """/* SIMPLE QUERY 3: BEST CROP TO PLANT BASED ON TEMPERATURE */
-WITH crop_temp AS (
-  SELECT
-    c.crop,
-    c.yield_kg_per_acre,
-    t.average_temp
-  FROM crop_data c
-  JOIN temperature_data t ON c.year = t.year AND UPPER(c.state) = UPPER(t.state)
-  WHERE c.year BETWEEN 2016 AND 2021
-),
-ranked_temp AS (
-  SELECT *,
-    NTILE(3) OVER (ORDER BY average_temp) AS temp_level
-  FROM crop_temp
-),
-temp_category AS (
-  SELECT *,
-    CASE
-      WHEN temp_level = 1 THEN 'Low'
-      WHEN temp_level = 2 THEN 'Mid'
-      ELSE 'High'
-    END AS temp_group
-  FROM ranked_temp
-),
-avg_yield_by_temp AS (
-  SELECT
-    temp_group,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    ROW_NUMBER() OVER (PARTITION BY temp_group ORDER BY AVG(yield_kg_per_acre) DESC) AS rank
-  FROM temp_category
-  GROUP BY temp_group, crop
-)
-
-SELECT temp_group, crop, ROUND(avg_yield::numeric, 2) AS avg_yield
-FROM avg_yield_by_temp
-WHERE rank = 1
-ORDER BY temp_group; """
-
-query8 = """ /* SIMPLE QUERY 4: BEST CROP TO PLANT BASED ON PRECIPITATION */
-WITH yearly_precip AS (
+query7 = """/* SIMPLE QUERY 3: BEST CROP TO PLANT BASED ON MIN/MAX PRECIPITATION */
+WITH yearly_state_precip AS (
   SELECT
     EXTRACT(YEAR FROM start_date)::int AS year,
     UPPER(state) AS state,
-    AVG(precipitation) AS avg_precip
-  FROM weather_events
-  WHERE start_date BETWEEN '2016-01-01' AND '2021-12-31'
-  GROUP BY EXTRACT(YEAR FROM start_date), UPPER(state)
-),
-crop_precip AS (
-  SELECT
-    c.crop,
-    c.yield_kg_per_acre,
-    y.avg_precip
-  FROM crop_data c
-  JOIN yearly_precip y
-    ON c.year = y.year AND UPPER(c.state) = y.state
-  WHERE c.year BETWEEN 2016 AND 2021
-),
-ranked_precip AS (
-  SELECT *,
-    NTILE(3) OVER (ORDER BY avg_precip) AS precip_level
-  FROM crop_precip
-),
-precip_category AS (
-  SELECT *,
-    CASE
-      WHEN precip_level = 1 THEN 'Low'
-      WHEN precip_level = 2 THEN 'Mid'
-      ELSE 'High'
-    END AS precip_group
-  FROM ranked_precip
-),
-avg_yield_by_precip AS (
-  SELECT
-    precip_group,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    ROW_NUMBER() OVER (
-      PARTITION BY precip_group
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
-  FROM precip_category
-  GROUP BY precip_group, crop
-)
-
-SELECT precip_group, crop, ROUND(avg_yield::numeric, 2) AS avg_yield
-FROM avg_yield_by_precip
-WHERE rank = 1
-ORDER BY precip_group; """
-
-query9 = """/* SIMPLE QUERY 5: BEST CROP TO PLANT BY STATE BASED ON POLLUTION */
-WITH crop_pollution_joined AS (
-  SELECT
-    c.year,
-    UPPER(c.state) AS state,
-    c.crop,
-    c.yield_kg_per_acre,
-    p."CO Mean" AS co,
-    p."NO2 Mean" AS no2,
-    p."SO2 Mean" AS so2,
-    p."O3 Mean" AS o3
-  FROM crop_data c
-  JOIN pollution_data p
-    ON c.year = p."Year" AND UPPER(c.state) = UPPER(p."State")
-  WHERE c.year BETWEEN 2016 AND 2022
-),
-crop_pollution_avg AS (
-  SELECT
-    state,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    AVG(co) AS avg_co,
-    AVG(no2) AS avg_no2,
-    AVG(so2) AS avg_so2,
-    AVG(o3) AS avg_o3,
-    ROW_NUMBER() OVER (
-      PARTITION BY state
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
-  FROM crop_pollution_joined
-  GROUP BY state, crop
-)
-
-SELECT
-  state,
-  crop AS best_crop_by_pollution,
-  ROUND(avg_yield::numeric, 2) AS avg_yield_kg_per_acre,
-  ROUND(avg_co::numeric, 4) AS avg_co,
-  ROUND(avg_no2::numeric, 4) AS avg_no2,
-  ROUND(avg_so2::numeric, 4) AS avg_so2,
-  ROUND(avg_o3::numeric, 4) AS avg_o3
-FROM crop_pollution_avg
-WHERE rank = 1
-ORDER BY state; """
-
-query10 = """ /* SIMPLE QUERY 6: BEST CROP TO PLANT BY STATE BASED ON TEMPERATURE */
-WITH crop_temperature_joined AS (
-  SELECT
-    c.year,
-    UPPER(c.state) AS state,
-    c.crop,
-    c.yield_kg_per_acre,
-    t.average_temp AS temp
-  FROM crop_data c
-  JOIN temperature_data t
-    ON c.year = t.year AND UPPER(c.state) = UPPER(t.state)
-  WHERE c.year BETWEEN 2016 AND 2022
-),
-crop_temperature_avg AS (
-  SELECT
-    state,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    AVG(temp) AS avg_temp,
-    ROW_NUMBER() OVER (
-      PARTITION BY state
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
-  FROM crop_temperature_joined
-  GROUP BY state, crop
-)
-
-SELECT state, crop, ROUND(avg_yield::numeric, 2) AS avg_yield, ROUND(avg_temp::numeric, 2) AS avg_temp
-FROM crop_temperature_avg
-WHERE rank = 1
-ORDER BY state; """
-
-query11 = """ /* SIMPLE QUERY 7: BEST CROP TO PLANT BY STATE BASED ON PRECIPITATION */
-WITH yearly_precip AS (
-  SELECT
-    EXTRACT(YEAR FROM start_date)::int AS year,
-    UPPER(state) AS state,
-    AVG(precipitation) AS avg_precip
+    AVG(precipitation) AS yearly_avg_precip
   FROM weather_events
   WHERE start_date BETWEEN '2016-01-01' AND '2022-12-31'
   GROUP BY EXTRACT(YEAR FROM start_date), UPPER(state)
 ),
-crop_precip_joined AS (
-  SELECT
-    c.year,
-    UPPER(c.state) AS state,
-    c.crop,
-    c.yield_kg_per_acre,
-    y.avg_precip AS precip
-  FROM crop_data c
-  JOIN yearly_precip y
-    ON c.year = y.year AND UPPER(c.state) = y.state
-  WHERE c.year BETWEEN 2016 AND 2022
-),
-crop_precip_avg AS (
+state_avg_precip AS (
   SELECT
     state,
-    crop,
-    AVG(yield_kg_per_acre) AS avg_yield,
-    AVG(precip) AS avg_precip,
-    ROW_NUMBER() OVER (
-      PARTITION BY state
-      ORDER BY AVG(yield_kg_per_acre) DESC
-    ) AS rank
-  FROM crop_precip_joined
-  GROUP BY state, crop
+    AVG(yearly_avg_precip) AS avg_precip
+  FROM yearly_state_precip
+  GROUP BY state
+),
+crop_states AS (
+  SELECT DISTINCT UPPER(state) AS state, crop
+  FROM crop_data
+  WHERE year BETWEEN 2016 AND 2022
+),
+crop_precip_joined AS (
+  SELECT
+    cs.crop,
+    sap.avg_precip
+  FROM crop_states cs
+  JOIN state_avg_precip sap ON cs.state = sap.state
 )
+SELECT
+  crop,
+  ROUND(MIN(avg_precip)::numeric, 2) AS min_precip_mm,
+  ROUND(MAX(avg_precip)::numeric, 2) AS max_precip_mm
+FROM crop_precip_joined
+GROUP BY crop
+ORDER BY crop; """
 
-SELECT state, crop, ROUND(avg_yield::numeric, 2) AS avg_yield, ROUND(avg_precip::numeric, 2) AS avg_precip
-FROM crop_precip_avg
-WHERE rank = 1
-ORDER BY state; """
+query8 = """ /* SIMPLE QUERY 4: BEST CROP TO PLANT BASED ON MIN/MAX TEMPERATURE */
+WITH yearly_state_temp AS (
+  SELECT
+    year,
+    UPPER(state) AS state,
+    AVG(average_temp) AS yearly_avg_temp
+  FROM temperature_data
+  WHERE year BETWEEN 2016 AND 2022
+  GROUP BY year, UPPER(state)
+),
+state_avg_temp AS (
+  SELECT
+    state,
+    AVG(yearly_avg_temp) AS avg_temp_f
+  FROM yearly_state_temp
+  GROUP BY state
+),
+crop_states AS (
+  SELECT DISTINCT UPPER(state) AS state, crop
+  FROM crop_data
+  WHERE year BETWEEN 2016 AND 2022
+),
+crop_temp_joined AS (
+  SELECT
+    cs.crop,
+    sat.avg_temp_f
+  FROM crop_states cs
+  JOIN state_avg_temp sat ON cs.state = sat.state
+)
+SELECT
+  crop,
+  ROUND(MIN(avg_temp_f)::numeric, 1) AS min_temp_f,
+  ROUND(MAX(avg_temp_f)::numeric, 1) AS max_temp_f
+FROM crop_temp_joined
+GROUP BY crop
+ORDER BY crop; """
 
-query12 = """ /*SIMPLE QUERY 8: BEST CROP BY SEASON*/
+query9 = """ /*SIMPLE QUERY 5: BEST CROP BY SEASON*/
 WITH crop_season_yields AS (
   SELECT
     season,
@@ -656,7 +454,7 @@ FROM crop_season_yields
 WHERE rank = 1
 ORDER BY season; """
 
-query13 = """ /*SIMPLE QUERY 9: BEST SEASON FOR EACH CROP*/
+query10 = """ /*SIMPLE QUERY 6: BEST SEASON FOR EACH CROP*/
 WITH crop_season_yields AS (
   SELECT
     crop,
