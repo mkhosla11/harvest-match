@@ -54,7 +54,7 @@ export default function LeaderboardPage() {
         <ResponsiveContainer width="100%" height={500}>
           <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="crop" style={{ fontFamily: 'Georgia',fontSize: '8px' }} angle={-20}
+            <XAxis dataKey="crop" style={{ fontFamily: 'Georgia',fontSize: '8px' }} angle={-25}
             textAnchor="end"/>
             <YAxis label={{ value: 'Avg Yield (kg/acre)', angle: -90, position: 'insideLeft' }} />
             <Tooltip />
