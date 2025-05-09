@@ -356,13 +356,13 @@ const bestClimateResilientCrops = async function(req, res) {
           crop,
           yield_kg_per_acre,
           CASE
-            WHEN pollution < 15 OR pollution > 35 THEN 1 ELSE 0
+            WHEN pollution > 16 THEN 1 ELSE 0
           END +
           CASE
-            WHEN average_temp < 15 OR average_temp > 25 THEN 1 ELSE 0
+            WHEN average_temp < 20 OR average_temp > 80 THEN 1 ELSE 0
           END +
           CASE
-            WHEN avg_precip < 400 OR avg_precip > 900 THEN 1 ELSE 0
+            WHEN avg_precip <= 0.01 OR avg_precip > 0.16 THEN 1 ELSE 0
           END AS extreme_score
         FROM crop_env
       ),

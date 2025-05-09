@@ -52,7 +52,7 @@ export default function LeaderboardPage() {
 
       <div style={styles.chartContainer}>
         <ResponsiveContainer width="100%" height={500}>
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}  barCategoryGap={50}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="crop" style={{ fontFamily: 'Georgia',fontSize: '8px' }} angle={-25}
             textAnchor="end"/>
