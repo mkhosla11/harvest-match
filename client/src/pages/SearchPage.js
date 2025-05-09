@@ -2,114 +2,135 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function SearchPage() {
-  const [formData, setFormData] = useState({
-    region: "",
-    temperature: "",
-    rainfall: "",
-    soilType: "",
-  });
-
+  const [region, setRegion] = useState("Northeast");
+  const [temperatureMin, setTemperatureMin] = useState(0);
+  const [temperatureMax, setTemperatureMax] = useState(120);
+  const [rainfallMin, setRainfallMin] = useState(0);
+  const [rainfallMax, setRainfallMax] = useState(2);
+  const [pollutionMin, setPollutionMin] = useState(0);
+  const [pollutionMax, setPollutionMax] = useState(20);
   const [results, setResults] = useState([]);
+  const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
+
+  const handleSearch = async () => {
+    try {
+      const [regionRes, tempRes, rainRes, pollRes] = await Promise.all([
+        fetch("http://localhost:8080/best-region-by-crop"),
+        fetch("http://localhost:8080/best-temp-range-by-crop"),
+        fetch("http://localhost:8080/best-precip-range-by-crop"),
+        fetch("http://localhost:8080/best-pollution-range-by-crop")
+      ]);
+
+      const [regionData, tempData, rainData, pollData] = await Promise.all([
+        regionRes.json(),
+        tempRes.json(),
+        rainRes.json(),
+        pollRes.json()
+      ]);
+
+      const filtered = regionData.filter((crop) => {
+        const temp = tempData.find((t) => t.crop === crop.crop);
+        const rain = rainData.find((r) => r.crop === crop.crop);
+        const poll = pollData.find((p) => p.crop === crop.crop);
+        return (
+          crop.best_region === region &&
+          temp && temp.min_temp_f >= temperatureMin && temp.max_temp_f <= temperatureMax &&
+          rain && rain.min_precip_mm >= rainfallMin && rain.max_precip_mm <= rainfallMax &&
+          poll && poll.min_pollution_index >= pollutionMin && poll.max_pollution_index <= pollutionMax
+        );
+      });
+
+      setResults(filtered);
+      setShowPopup(true);
+    } catch (error) {
+      console.error("Error fetching crop data:", error);
+    }
+  };
+
+  const regions = [
+    "Northeast",
+    "Southeast",
+    "Midwest",
+    "Southwest",
+    "West",
+    "Northwest",
+    "Central",
+    "Pacific",
+  ];
 
   const routes = [
     { name: "Home", path: "/" },
     { name: "Map", path: "/map" },
+    { name: "Search", path: "/search" },
+    {name: "Crop Info", path: "/best-conditions"},
+    {name: "Crop Trends", path: "/crop-trends"},
+    {name: "Crop Leaderboard", path: "/best-climate-resilient-crops"},
+    { name: "Seasonal Info", path: "/seasonal-crop-info" }
   ];
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Dummy results – replace with actual logic later
-    const dummyCrops = [
-      { name: "Corn", match: "High yield in warm, wet regions" },
-      { name: "Wheat", match: "Adaptable to moderate climates" },
-      { name: "Soybean", match: "Requires rich soil and warm weather" },
-    ];
-
-    setResults(dummyCrops);
-  };
 
   return (
     <div style={styles.page}>
-      {/* ✅ Navbar */}
       <header style={styles.navbar}>
         <HomeButton onClick={() => navigate("/")} />
         <nav style={styles.navLinks}>
           {routes.map((route, i) => (
-            <HoverButton key={i} label={route.name} onClick={() => navigate(route.path)} />
+            <HoverButton
+              key={i}
+              label={route.name}
+              onClick={() => navigate(route.path)}
+            />
           ))}
         </nav>
       </header>
 
-      <div style={styles.container}>
-        <h1 style={styles.heading}>🌿 Find the Right Crop for Your Needs</h1>
+      <h1 style={styles.title}>Filter for Your Best Crop</h1>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>
-            Region:
-            <input
-              type="text"
-              name="region"
-              value={formData.region}
-              onChange={handleChange}
-              style={styles.input}
-              placeholder="e.g. Southeast US"
-            />
-          </label>
-          <label style={styles.label}>
-            Avg Temperature (°C):
-            <input
-              type="number"
-              name="temperature"
-              value={formData.temperature}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </label>
-          <label style={styles.label}>
-            Avg Rainfall (mm/year):
-            <input
-              type="number"
-              name="rainfall"
-              value={formData.rainfall}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </label>
-          <label style={styles.label}>
-            Soil Type:
-            <input
-              type="text"
-              name="soilType"
-              value={formData.soilType}
-              onChange={handleChange}
-              style={styles.input}
-              placeholder="e.g. Loamy"
-            />
-          </label>
-          <button type="submit" style={styles.button}>
-            Search Crops →
-          </button>
-        </form>
+      <div style={styles.formContainer}>
+        <label>Region:</label>
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          style={styles.input}
+        >
+          {regions.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
 
-        {results.length > 0 && (
-          <div style={styles.results}>
-            <h2 style={styles.resultsHeading}>Recommended Crops:</h2>
-            <ul>
-              {results.map((crop, index) => (
-                <li key={index} style={styles.resultItem}>
-                  <strong>{crop.name}</strong> — <em>{crop.match}</em>
-                </li>
-              ))}
-            </ul>
+        <label>Temperature Range (°F): {temperatureMin} - {temperatureMax}</label>
+        <input type="range" min="0" max="120" value={temperatureMin} onChange={(e) => setTemperatureMin(Number(e.target.value))} style={styles.slider} />
+        <input type="range" min="0" max="120" value={temperatureMax} onChange={(e) => setTemperatureMax(Number(e.target.value))} style={styles.slider} />
+
+        <label>Rainfall Range (m/year): {rainfallMin} - {rainfallMax}</label>
+        <input type="range" min="0" max="2" step="0.01" value={rainfallMin} onChange={(e) => setRainfallMin(Number(e.target.value))} style={styles.slider} />
+        <input type="range" min="0" max="2" step="0.01" value={rainfallMax} onChange={(e) => setRainfallMax(Number(e.target.value))} style={styles.slider} />
+
+        <label>Pollution Index: {pollutionMin} - {pollutionMax}</label>
+        <input type="range" min="0" max="20" step="0.1" value={pollutionMin} onChange={(e) => setPollutionMin(Number(e.target.value))} style={styles.slider} />
+        <input type="range" min="0" max="20" step="0.1" value={pollutionMax} onChange={(e) => setPollutionMax(Number(e.target.value))} style={styles.slider} />
+
+        <button style={styles.button} onClick={handleSearch}>
+          Search Crops →
+        </button>
+
+        {showPopup && (
+          <div style={styles.popupOverlay}>
+            <div style={styles.popup}>
+              <button onClick={() => setShowPopup(false)} style={styles.closeButton}>
+                ×
+              </button>
+              <h3>Best Matching Crops:</h3>
+              <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
+                {results.map((crop, i) => (
+                  <li key={i} style={{ marginBottom: "0.5rem" }}>
+                    <strong>{crop.crop}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </div>
@@ -161,7 +182,7 @@ function HomeButton({ onClick }) {
         transition: "all 0.3s ease",
       }}
     >
-      🌾 HarvestMatch: The Crop Matching Interface
+      HarvestMatch
     </button>
   );
 }
@@ -171,6 +192,7 @@ const styles = {
     fontFamily: "'Georgia', 'Times New Roman', serif",
     backgroundColor: "#f0f9f4",
     minHeight: "100vh",
+    paddingBottom: "3rem",
   },
   navbar: {
     display: "flex",
@@ -185,64 +207,71 @@ const styles = {
     display: "flex",
     gap: "1.2rem",
   },
-  container: {
-    padding: "2rem",
-    maxWidth: "800px",
-    margin: "0 auto",
-  },
-  heading: {
+  title: {
     textAlign: "center",
-    fontSize: "2rem",
-    marginBottom: "2rem",
+    margin: "2rem 0 1rem",
+    color: "#2f4f2f",
   },
-  form: {
+  formContainer: {
+    maxWidth: "450px",
+    background: "#fff",
+    margin: "0 auto",
+    padding: "2rem",
+    borderRadius: "10px",
+    boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
     display: "flex",
     flexDirection: "column",
     gap: "1rem",
-    backgroundColor: "white",
-    padding: "2rem",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-  },
-  label: {
-    display: "flex",
-    flexDirection: "column",
-    fontWeight: "bold",
-    fontSize: "1rem",
   },
   input: {
-    marginTop: "0.5rem",
-    padding: "0.6rem",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "1rem",
-  },
-  button: {
-    marginTop: "1rem",
     padding: "0.75rem",
     fontSize: "1rem",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+  },
+  slider: {
+    width: "100%",
+  },
+  button: {
     backgroundColor: "#3e8e41",
     color: "white",
     border: "none",
+    padding: "0.75rem",
+    fontSize: "1rem",
     borderRadius: "8px",
     cursor: "pointer",
     fontWeight: "bold",
-    transition: "all 0.3s ease",
   },
-  results: {
-    marginTop: "2rem",
-    backgroundColor: "#ffffff",
-    padding: "1.5rem",
+  popupOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  popup: {
+    backgroundColor: "#fff",
+    padding: "2rem",
     borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+    width: "90%",
+    maxWidth: "400px",
+    textAlign: "center",
+    position: "relative",
   },
-  resultsHeading: {
-    marginBottom: "1rem",
-    fontSize: "1.3rem",
-    color: "#3e8e41",
-  },
-  resultItem: {
-    marginBottom: "0.8rem",
-    fontSize: "1.05rem",
+  closeButton: {
+    position: "absolute",
+    top: "1rem",
+    right: "1.5rem",
+    background: "transparent",
+    border: "none",
+    fontSize: "1.5rem",
+    fontWeight: "bold",
+    cursor: "pointer",
   },
 };

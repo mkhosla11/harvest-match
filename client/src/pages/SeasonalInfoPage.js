@@ -1,8 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function DashboardPage() {
+export default function SeasonalInfo() {
+  const [bestBySeason, setBestBySeason] = useState([]);
+  const [bestForCrop, setBestForCrop] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch("http://localhost:8080/best-crop-by-season")
+      .then((res) => res.json())
+      .then((data) => setBestBySeason(data));
+
+    fetch("http://localhost:8080/best-season-for-crop")
+      .then((res) => res.json())
+      .then((data) => setBestForCrop(data));
+  }, []);
 
   const routes = [
     { name: "Home", path: "/" },
@@ -29,27 +41,55 @@ export default function DashboardPage() {
         </nav>
       </header>
 
-      <main style={styles.heroWrapper}>
-        <section style={styles.hero}>
-          <div style={styles.leafAccent}></div>
-          <h1 style={styles.heroTitle}>Rooted in Data. Grown for You.</h1>
-          <hr style={styles.divider} />
+      <div style={{ ...styles.section }}>
+  <h2 style={styles.sectionTitle}>Best Crop by Season</h2>
+  <table style={styles.table}>
+    <thead>
+      <tr>
+        <th>Season</th>
+        <th>Best Crop</th>
+        <th>Avg Yield (kg/acre)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {bestBySeason.map((row, index) => (
+        <tr key={index}>
+          <td>{row.season}</td>
+          <td>{row.best_crop}</td>
+          <td>{row.avg_yield_kg_per_acre}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
-          <div style={styles.descriptionBlock}>
-            <p>Discover optimal crops using real climate data and smart matching.</p>
-            <p>Plant with confidence.</p>
-          </div>
-
-          <HoverCTA onClick={() => navigate("/map")} />
-        </section>
-      </main>
+<div style={{ ...styles.section }}>
+  <h2 style={styles.sectionTitle}>Best Season to Plant Each Crop</h2>
+  <table style={styles.table}>
+    <thead>
+      <tr>
+        <th>Crop</th>
+        <th>Best Season</th>
+        <th>Avg Yield (kg/acre)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {bestForCrop.map((row, index) => (
+        <tr key={index}>
+          <td>{row.crop}</td>
+          <td>{row.best_season_to_plant}</td>
+          <td>{row.avg_yield_kg_per_acre}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
     </div>
   );
 }
 
 function HoverButton({ label, onClick }) {
   const [hovered, setHovered] = useState(false);
-
   return (
     <button
       onClick={onClick}
@@ -72,29 +112,8 @@ function HoverButton({ label, onClick }) {
   );
 }
 
-function HoverCTA({ onClick }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        ...styles.ctaButton,
-        backgroundColor: hovered ? "white" : "#3e8e41",
-        color: hovered ? "#3e8e41" : "white",
-        borderColor: "#3e8e41",
-      }}
-    >
-      Start Exploring →
-    </button>
-  );
-}
-
 function HomeButton({ onClick }) {
   const [hovered, setHovered] = useState(false);
-
   return (
     <button
       onClick={onClick}
@@ -121,9 +140,9 @@ function HomeButton({ onClick }) {
 const styles = {
   page: {
     fontFamily: "'Georgia', 'Times New Roman', serif",
-    background: "linear-gradient(to bottom right, #e8f5e9, #f0f9f4)",
+    backgroundColor: "#f0f9f4",
     minHeight: "100vh",
-    margin: 0,
+    paddingBottom: "3rem",
   },
   navbar: {
     display: "flex",
@@ -131,60 +150,48 @@ const styles = {
     alignItems: "center",
     backgroundColor: "#3e8e41",
     padding: "1rem 2rem",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
     color: "white",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
   },
   navLinks: {
     display: "flex",
     gap: "1.2rem",
   },
-  heroWrapper: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "4rem 2rem",
-  },
-  hero: {
-    backgroundColor: "#ffffff",
+  title: {
     textAlign: "center",
-    padding: "4rem 2rem",
-    borderRadius: "16px",
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.1)",
-    maxWidth: "800px",
-    width: "100%",
-  },
-  leafAccent: {
-    fontSize: "2rem",
-    marginBottom: "1rem",
-  },
-  heroTitle: {
-    fontSize: "2.5rem",
-    fontWeight: "bold",
+    margin: "2rem 0 1rem",
     color: "#2f4f2f",
   },
-  divider: {
-    width: "80px",
-    height: "2px",
-    backgroundColor: "#a8d5ba",
-    border: "none",
-    margin: "1rem auto",
+  section: {
+    margin: "2rem auto",
+    padding: "1.5rem",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    boxShadow: "0 6px 12px rgba(0,0,0,0.1)",
+    width: "90%",
+    maxWidth: "800px",
+    textAlign: "center",
   },
-  descriptionBlock: {
-    fontSize: "1.2rem",
-    lineHeight: "1.7",
-    color: "#3b5d3b",
-    maxWidth: "600px",
-    margin: "1rem auto",
+  sectionTitle: {
+    fontFamily: "'Georgia', serif",
+    fontSize: "1.75rem",
+    marginBottom: "1rem",
+    color: "#2e4e2e",
   },
-  ctaButton: {
-    marginTop: "2.5rem",
-    fontSize: "1rem",
-    padding: "0.75rem 1.5rem",
-    border: "2px solid",
-    borderRadius: "8px",
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    cursor: "pointer",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-    transition: "all 0.3s ease",
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontFamily: "'Georgia', serif",
+  },
+  th: {
+    backgroundColor: "#f0f9f4",
+    fontWeight: "bold",
+    padding: "0.75rem",
+    borderBottom: "2px solid #ccc",
+  },
+  td: {
+    padding: "0.75rem",
+    borderBottom: "1px solid #ddd",
   },
 };
+

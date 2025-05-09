@@ -1,8 +1,26 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-export default function DashboardPage() {
+
+export default function LeaderboardPage() {
+  const [data, setData] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch("http://localhost:8080/best-climate-resilient-crops")
+      .then((res) => res.json())
+      .then((data) => setData(data))
+      .catch((err) => console.error("Failed to load data:", err));
+  }, []);
 
   const routes = [
     { name: "Home", path: "/" },
@@ -29,20 +47,21 @@ export default function DashboardPage() {
         </nav>
       </header>
 
-      <main style={styles.heroWrapper}>
-        <section style={styles.hero}>
-          <div style={styles.leafAccent}></div>
-          <h1 style={styles.heroTitle}>Rooted in Data. Grown for You.</h1>
-          <hr style={styles.divider} />
+      <h1 style={styles.title}>Most Climate-Resilient Crops</h1>
+      <p style={styles.subtitle}>Crops with the highest average yield under extreme environmental conditions.</p>
 
-          <div style={styles.descriptionBlock}>
-            <p>Discover optimal crops using real climate data and smart matching.</p>
-            <p>Plant with confidence.</p>
-          </div>
-
-          <HoverCTA onClick={() => navigate("/map")} />
-        </section>
-      </main>
+      <div style={styles.chartContainer}>
+        <ResponsiveContainer width="100%" height={500}>
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="crop" style={{ fontFamily: 'Georgia',fontSize: '8px' }} angle={-20}
+            textAnchor="end"/>
+            <YAxis label={{ value: 'Avg Yield (kg/acre)', angle: -90, position: 'insideLeft' }} />
+            <Tooltip />
+            <Bar dataKey="avg_yield_in_extremes" fill="#3e8e41" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -68,26 +87,6 @@ function HoverButton({ label, onClick }) {
       }}
     >
       {label}
-    </button>
-  );
-}
-
-function HoverCTA({ onClick }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        ...styles.ctaButton,
-        backgroundColor: hovered ? "white" : "#3e8e41",
-        color: hovered ? "#3e8e41" : "white",
-        borderColor: "#3e8e41",
-      }}
-    >
-      Start Exploring →
     </button>
   );
 }
@@ -121,9 +120,9 @@ function HomeButton({ onClick }) {
 const styles = {
   page: {
     fontFamily: "'Georgia', 'Times New Roman', serif",
-    background: "linear-gradient(to bottom right, #e8f5e9, #f0f9f4)",
+    backgroundColor: "#f0f9f4",
     minHeight: "100vh",
-    margin: 0,
+    paddingBottom: "3rem",
   },
   navbar: {
     display: "flex",
@@ -132,59 +131,43 @@ const styles = {
     backgroundColor: "#3e8e41",
     padding: "1rem 2rem",
     color: "white",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
   },
   navLinks: {
     display: "flex",
-    gap: "1.2rem",
+    gap: "1rem",
   },
-  heroWrapper: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "4rem 2rem",
+  navButton: {
+    backgroundColor: "transparent",
+    border: "2px solid white",
+    color: "white",
+    padding: "0.5rem 1rem",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontFamily: "'Georgia', 'Times New Roman', serif",
   },
-  hero: {
-    backgroundColor: "#ffffff",
-    textAlign: "center",
-    padding: "4rem 2rem",
-    borderRadius: "16px",
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.1)",
-    maxWidth: "800px",
-    width: "100%",
-  },
-  leafAccent: {
-    fontSize: "2rem",
-    marginBottom: "1rem",
-  },
-  heroTitle: {
-    fontSize: "2.5rem",
-    fontWeight: "bold",
-    color: "#2f4f2f",
-  },
-  divider: {
-    width: "80px",
-    height: "2px",
-    backgroundColor: "#a8d5ba",
+  logoButton: {
+    backgroundColor: "#3e8e41",
     border: "none",
-    margin: "1rem auto",
-  },
-  descriptionBlock: {
+    color: "white",
     fontSize: "1.2rem",
-    lineHeight: "1.7",
-    color: "#3b5d3b",
-    maxWidth: "600px",
-    margin: "1rem auto",
-  },
-  ctaButton: {
-    marginTop: "2.5rem",
-    fontSize: "1rem",
-    padding: "0.75rem 1.5rem",
-    border: "2px solid",
-    borderRadius: "8px",
+    fontWeight: "bold",
     fontFamily: "'Georgia', 'Times New Roman', serif",
     cursor: "pointer",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-    transition: "all 0.3s ease",
+  },
+  title: {
+    textAlign: "center",
+    marginTop: "2rem",
+    color: "#2f4f2f",
+    fontSize: "2rem",
+  },
+  subtitle: {
+    textAlign: "center",
+    color: "#4e704e",
+    marginBottom: "2rem",
+  },
+  chartContainer: {
+    width: "90%",
+    maxWidth: "1000px",
+    margin: "0 auto",
   },
 };

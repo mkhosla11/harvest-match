@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ComposableMap,
@@ -10,16 +10,38 @@ const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
 
 export default function MapPage() {
   const [selectedState, setSelectedState] = useState(null);
+  const [stateClimateData, setStateClimateData] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (selectedState) {
+      const url = `http://localhost:8080/state/${encodeURIComponent(selectedState)}`;
+      console.log("Fetching from:", url);
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Data received:", data);
+          setStateClimateData(data[0]); // now expecting a single row per state
+        })
+        .catch((err) => {
+          console.error("Fetch error:", err);
+          setStateClimateData(null);
+        });
+    }
+  }, [selectedState]);
 
   const routes = [
     { name: "Home", path: "/" },
+    { name: "Map", path: "/map" },
     { name: "Search", path: "/search" },
+    {name: "Crop Info", path: "/best-conditions"},
+    {name: "Crop Trends", path: "/crop-trends"},
+    {name: "Crop Leaderboard", path: "/best-climate-resilient-crops"},
+    { name: "Seasonal Info", path: "/seasonal-crop-info" }
   ];
 
   return (
     <div style={styles.page}>
-      {/* ✅ NAVBAR */}
       <header style={styles.navbar}>
         <HomeButton onClick={() => navigate("/")} />
         <nav style={styles.navLinks}>
@@ -41,7 +63,10 @@ export default function MapPage() {
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
-                  onClick={() => setSelectedState(geo.properties.name)}
+                  onClick={() => {
+                    setStateClimateData(null); // reset before fetching new data
+                    setSelectedState(geo.properties.name);
+                  }}
                   style={{
                     default: {
                       fill: "#cdeac0",
@@ -70,17 +95,19 @@ export default function MapPage() {
 
         {selectedState && (
           <div style={styles.popup}>
-            <button
-              style={styles.closeButton}
-              onClick={() => setSelectedState(null)}
-            >
-              ×
-            </button>
+            <button style={styles.closeButton} onClick={() => setSelectedState(null)}>×</button>
             <h2 style={styles.popupTitle}>{selectedState}</h2>
-            <p>
-              This is placeholder info for <strong>{selectedState}</strong>. You can
-              replace this with climate, crop, or weather data.
-            </p>
+            {stateClimateData ? (
+              <div>
+                Dominant Crop: <strong>{stateClimateData.dominant_crop}</strong><br/>
+                Avg Temp: {stateClimateData.avg_temp}°F<br/>
+                Avg Precip: {stateClimateData.avg_precipitation} mm<br/>
+                Avg CO: {stateClimateData.avg_co}<br/>
+                Avg NO₂: {stateClimateData.avg_no2}, Avg SO₂: {stateClimateData.avg_so2}, Avg O₃: {stateClimateData.avg_o3}
+              </div>
+            ) : (
+              <p>Loading climate data for <strong>{selectedState}</strong>...</p>
+            )}
           </div>
         )}
       </div>
@@ -134,7 +161,7 @@ function HomeButton({ onClick }) {
         transition: "all 0.3s ease",
       }}
     >
-      🌾 HarvestMatch: The Crop Matching Interface
+      HarvestMatch
     </button>
   );
 }
@@ -158,11 +185,6 @@ const styles = {
     display: "flex",
     gap: "1.2rem",
   },
-  title: {
-    textAlign: "center",
-    color: "#2f4f2f",
-    margin: "2rem 0 1rem",
-  },
   mapContainer: {
     position: "relative",
     display: "flex",
@@ -183,7 +205,7 @@ const styles = {
     borderRadius: "12px",
     boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
     width: "80%",
-    maxWidth: "400px",
+    maxWidth: "450px",
     zIndex: 10,
     textAlign: "center",
     color: "#2f4f2f",
