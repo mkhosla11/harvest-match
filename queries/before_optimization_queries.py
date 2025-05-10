@@ -296,7 +296,36 @@ ORDER BY avg_yield_in_extremes DESC; """
 
 
 ## SIMPLE QUERIES
-query5 = """/* SIMPLE QUERY 1: BEST CROP TO PLANT BY REGION BASED ON YIELD */
+query5 = """/* SIMPLE QUERY 1: BEST CROPS TO PLANT BASED ON MIN/MAX POLLUTION */
+WITH state_pollution_index AS (
+  SELECT
+    UPPER("State") AS state,
+    AVG("CO Mean") + AVG("NO2 Mean") + AVG("SO2 Mean") + AVG("O3 Mean") AS pollution_index
+  FROM pollution_data
+  WHERE "Year" BETWEEN 2016 AND 2022
+  GROUP BY UPPER("State")
+),
+crop_states AS (
+  SELECT DISTINCT UPPER(state) AS state, crop
+  FROM crop_data
+  WHERE year BETWEEN 2016 AND 2022
+),
+crop_pollution_joined AS (
+  SELECT
+    cs.crop,
+    spi.pollution_index
+  FROM crop_states cs
+  JOIN state_pollution_index spi ON cs.state = spi.state
+)
+SELECT
+  crop,
+  ROUND(MIN(pollution_index)::numeric, 2) AS min_pollution_index,
+  ROUND(MAX(pollution_index)::numeric, 2) AS max_pollution_index
+FROM crop_pollution_joined
+GROUP BY crop
+ORDER BY crop; """
+
+query6 = """/* SIMPLE QUERY 2: BEST CROP TO PLANT BY REGION BASED ON YIELD */
 WITH state_regions AS (
   SELECT * FROM (VALUES
     ('MAINE','Northeast'), ('NEW HAMPSHIRE','Northeast'), ('VERMONT','Northeast'), ('MASSACHUSETTS','Northeast'), ('RHODE ISLAND','Northeast'), ('CONNECTICUT','Northeast'),
@@ -326,35 +355,6 @@ ranked AS (
 SELECT crop, region AS best_region, ROUND(avg_yield::numeric, 2) AS avg_yield
 FROM ranked
 WHERE rank = 1
-ORDER BY crop; """
-
-query6 = """/* SIMPLE QUERY 2: BEST CROPS TO PLANT BASED ON MIN/MAX POLLUTION */
-WITH state_pollution_index AS (
-  SELECT
-    UPPER("State") AS state,
-    AVG("CO Mean") + AVG("NO2 Mean") + AVG("SO2 Mean") + AVG("O3 Mean") AS pollution_index
-  FROM pollution_data
-  WHERE "Year" BETWEEN 2016 AND 2022
-  GROUP BY UPPER("State")
-),
-crop_states AS (
-  SELECT DISTINCT UPPER(state) AS state, crop
-  FROM crop_data
-  WHERE year BETWEEN 2016 AND 2022
-),
-crop_pollution_joined AS (
-  SELECT
-    cs.crop,
-    spi.pollution_index
-  FROM crop_states cs
-  JOIN state_pollution_index spi ON cs.state = spi.state
-)
-SELECT
-  crop,
-  ROUND(MIN(pollution_index)::numeric, 2) AS min_pollution_index,
-  ROUND(MAX(pollution_index)::numeric, 2) AS max_pollution_index
-FROM crop_pollution_joined
-GROUP BY crop
 ORDER BY crop; """
 
 query7 = """/* SIMPLE QUERY 3: BEST CROP TO PLANT BASED ON MIN/MAX PRECIPITATION */
